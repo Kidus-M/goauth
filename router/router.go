@@ -1,20 +1,40 @@
 package router
 
 import (
+	"task_manager/controllers"
+	"task_manager/middleware"
+
 	"github.com/gin-gonic/gin"
-	"go_mango/controllers"
 )
 
-// SetupRouter creates a gin.Engine and registers routes with provided controller
-func SetupRouter(taskController *controllers.TaskController) *gin.Engine {
+// SetupRouter configures routes and middleware
+func SetupRouter(ctl *controllers.Controller, authMw *middleware.AuthMiddleware) *gin.Engine {
 	r := gin.Default()
 
-	// Tasks routes
-	r.GET("/tasks", taskController.GetTasks)
-	r.GET("/tasks/:id", taskController.GetTaskByID)
-	r.POST("/tasks", taskController.CreateTask)
-	r.PUT("/tasks/:id", taskController.UpdateTask)
-	r.DELETE("/tasks/:id", taskController.DeleteTask)
+	// Public auth endpoints
+	r.POST("/register", ctl.Register)
+	r.POST("/login", ctl.Login)
+
+	// Routes requiring authentication
+	auth := r.Group("/")
+	auth.Use(authMw.AuthRequired())
+	{
+		// All authenticated users can read tasks
+		auth.GET("/tasks", ctl.GetTasks)
+		auth.GET("/tasks/:id", ctl.GetTaskByID)
+	}
+
+	// Admin-only actions
+	admin := r.Group("/")
+	admin.Use(authMw.AuthRequired(), authMw.RequireAdmin())
+	{
+		admin.POST("/tasks", ctl.CreateTask)
+		admin.PUT("/tasks/:id", ctl.UpdateTask)
+		admin.DELETE("/tasks/:id", ctl.DeleteTask)
+
+		// promote endpoint
+		admin.POST("/promote/:username", ctl.Promote)
+	}
 
 	return r
 }
