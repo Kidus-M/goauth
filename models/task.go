@@ -2,7 +2,7 @@ package models
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
-// Task represents the DB model for a task
+// Task represents stored task document
 type Task struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty" json:"-"`
 	Title       string             `bson:"title" json:"title" binding:"required"`
@@ -11,7 +11,7 @@ type Task struct {
 	Status      string             `bson:"status,omitempty" json:"status,omitempty"`
 }
 
-// TaskResponse is used for API responses (ID as hex string)
+// TaskResponse for API responses (id as hex string)
 type TaskResponse struct {
 	ID          string `json:"id"`
 	Title       string `json:"title"`
