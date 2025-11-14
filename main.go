@@ -8,47 +8,61 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"go_mango/controllers"
-	"go_mango/data"
-	"go_mango/router"
+	"task_manager/controllers"
+	"task_manager/data"
+	"task_manager/middleware"
+	"task_manager/router"
+
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func main() {
-	// Load .env if present
+	// load env
 	_ = godotenv.Load()
 
-	mongoURI := os.Getenv("MONGODB_URI")
+	uri := os.Getenv("MONGODB_URI")
 	dbName := os.Getenv("MONGODB_DATABASE")
-	collectionName := os.Getenv("MONGODB_COLLECTION")
-	if mongoURI == "" || dbName == "" || collectionName == "" {
-		log.Fatal("MONGODB_URI, MONGODB_DATABASE and MONGODB_COLLECTION must be set (see .env.example)")
+	taskCollName := os.Getenv("MONGODB_TASK_COLLECTION")
+	userCollName := os.Getenv("MONGODB_USER_COLLECTION")
+	jwtSecret := os.Getenv("JWT_SECRET")
+
+	if uri == "" || dbName == "" || taskCollName == "" || userCollName == "" || jwtSecret == "" {
+		log.Fatal("MONGODB_URI, MONGODB_DATABASE, collections and JWT_SECRET must be set (see .env.example)")
 	}
 
-	// Connect to MongoDB
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// connect to mongo
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	client, err := data.NewMongoClient(ctx, mongoURI)
+	client, err := data.NewMongoClient(ctx, uri)
 	if err != nil {
-		log.Fatalf("failed to create mongo client: %v", err)
+		log.Fatalf("failed to connect to mongodb: %v", err)
 	}
-
-	// Close client on exit
 	defer func() {
 		_ = client.Disconnect(context.Background())
 	}()
 
-	collection := client.Database(dbName).Collection(collectionName)
-	taskService := data.NewTaskService(collection)
-	taskController := controllers.NewTaskController(taskService)
+	db := client.Database(dbName)
+	taskColl := db.Collection(taskCollName)
+	userColl := db.Collection(userCollName)
 
-	r := router.SetupRouter(taskController)
+	// services
+	userService := data.NewUserService(userColl)
+	taskService := data.NewTaskService(taskColl)
+
+	// controller
+	controller := controllers.NewController(userService, taskService)
+
+	// middleware with jwt secret
+	authMw := middleware.NewAuthMiddleware(jwtSecret, userService)
+
+	// router
+	r := router.SetupRouter(controller, authMw)
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-
 	addr := fmt.Sprintf(":%s", port)
 	if err := r.Run(addr); err != nil {
 		log.Fatalf("failed to run server: %v", err)
