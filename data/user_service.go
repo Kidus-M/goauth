@@ -5,14 +5,14 @@ import (
 	"errors"
 	"time"
 
-	"task_manager/models"
+	"authgo/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"golang.org/x/crypto/bcrypt"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // UserService manages users in MongoDB

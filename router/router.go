@@ -1,8 +1,8 @@
 package router
 
 import (
-	"task_manager/controllers"
-	"task_manager/middleware"
+	"authgo/controllers"
+	"authgo/middleware"
 
 	"github.com/gin-gonic/gin"
 )

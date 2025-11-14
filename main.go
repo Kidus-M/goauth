@@ -7,13 +7,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/joho/godotenv"
-	"task_manager/controllers"
-	"task_manager/data"
-	"task_manager/middleware"
-	"task_manager/router"
+	"authgo/controllers"
+	"authgo/data"
+	"authgo/middleware"
+	"authgo/router"
 
-	"go.mongodb.org/mongo-driver/mongo"
+	"github.com/joho/godotenv"
 )
 
 func main() {

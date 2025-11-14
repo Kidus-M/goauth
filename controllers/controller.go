@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"task_manager/data"
-	"task_manager/models"
+	"authgo/data"
+	"authgo/models"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"

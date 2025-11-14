@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"task_manager/models"
+	"authgo/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

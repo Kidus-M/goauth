@@ -3,8 +3,9 @@ package middleware
 import (
 	"net/http"
 	"strings"
+	"fmt"
 
-	"task_manager/data"
+	"authgo/data"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -35,14 +36,14 @@ func (am *AuthMiddleware) AuthRequired() gin.HandlerFunc {
 			return
 		}
 		tokenString := parts[1]
-
 		token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
 			// ensure signing method
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, jwt.ErrTokenInvalidMethod
+				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 			}
 			return []byte(am.secret), nil
 		})
+		
 		if err != nil || !token.Valid {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			return
