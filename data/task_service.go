@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"go_mango/models"
+	"task_manager/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -13,26 +13,25 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// TaskService works with a Mongo collection to perform CRUD
+// TaskService uses a Mongo collection for tasks
 type TaskService struct {
 	collection *mongo.Collection
 	timeout    time.Duration
 }
 
-// NewTaskService returns a new TaskService bound to the provided collection
-func NewTaskService(collection *mongo.Collection) *TaskService {
+// NewTaskService constructs TaskService
+func NewTaskService(coll *mongo.Collection) *TaskService {
 	return &TaskService{
-		collection: collection,
+		collection: coll,
 		timeout:    5 * time.Second,
 	}
 }
 
-// GetAllTasks returns all tasks stored in the collection
 func (s *TaskService) GetAllTasks() ([]models.Task, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
 	defer cancel()
 
-	cur, err := s.collection.Find(ctx, bson.D{}, options.Find())
+	cur, err := s.collection.Find(ctx, bson.D{})
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +51,6 @@ func (s *TaskService) GetAllTasks() ([]models.Task, error) {
 	return tasks, nil
 }
 
-// GetTaskByID returns a task by its hex string ID
 func (s *TaskService) GetTaskByID(hexID string) (models.Task, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
 	defer cancel()
@@ -61,40 +59,33 @@ func (s *TaskService) GetTaskByID(hexID string) (models.Task, error) {
 	if err != nil {
 		return models.Task{}, errors.New("invalid id")
 	}
-
-	var task models.Task
-	if err := s.collection.FindOne(ctx, bson.M{"_id": oid}).Decode(&task); err != nil {
+	var t models.Task
+	if err := s.collection.FindOne(ctx, bson.M{"_id": oid}).Decode(&t); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return models.Task{}, nil
 		}
 		return models.Task{}, err
 	}
-	return task, nil
+	return t, nil
 }
 
-// CreateTask inserts a new task and returns the inserted document (with ID)
 func (s *TaskService) CreateTask(input models.Task) (models.Task, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
 	defer cancel()
 
-	// Ensure Title is present (binding also checks this at controller level)
 	if input.Title == "" {
 		return models.Task{}, errors.New("title required")
 	}
-
 	res, err := s.collection.InsertOne(ctx, input)
 	if err != nil {
 		return models.Task{}, err
 	}
-	oid, ok := res.InsertedID.(primitive.ObjectID)
-	if !ok {
-		return models.Task{}, errors.New("failed to convert inserted id")
+	if oid, ok := res.InsertedID.(primitive.ObjectID); ok {
+		input.ID = oid
 	}
-	input.ID = oid
 	return input, nil
 }
 
-// UpdateTask updates existing fields of a task by hex ID. Returns updated task.
 func (s *TaskService) UpdateTask(hexID string, updated models.Task) (models.Task, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
 	defer cancel()
@@ -132,7 +123,6 @@ func (s *TaskService) UpdateTask(hexID string, updated models.Task) (models.Task
 	return result, nil
 }
 
-// DeleteTask deletes a task by hex ID. Returns true if deleted.
 func (s *TaskService) DeleteTask(hexID string) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
 	defer cancel()
@@ -141,7 +131,6 @@ func (s *TaskService) DeleteTask(hexID string) (bool, error) {
 	if err != nil {
 		return false, errors.New("invalid id")
 	}
-
 	res, err := s.collection.DeleteOne(ctx, bson.M{"_id": oid})
 	if err != nil {
 		return false, err
